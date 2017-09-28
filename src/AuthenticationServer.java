@@ -103,16 +103,15 @@ public class AuthenticationServer extends UnicastRemoteObject implements Authent
 		return null;
 	}
 	
-	public boolean addCampus(String name, String virtualAddress, String code, int port) {
+	public boolean addCampus(CampusRegistry campus) {
 		for (CampusRegistry item : this.campusRegistries) {
-			if (item.name.equalsIgnoreCase(name)) {
-				authLogs.warning("The campus " + name + "already exists. Can not add duplicate entry");
+			if (item.name.equalsIgnoreCase(campus.name)) {
+				authLogs.warning("The campus " + campus.name + "already exists. Can not add duplicate entry");
 				return false;
 			}
 		}
-		CampusRegistry campus = new CampusRegistry(name, virtualAddress, code, port);
 		this.campusRegistries.add(campus);
-		authLogs.info("New campus " + name + "added to the repository.");
+		authLogs.info("New campus " + campus.name + "added to the repository.");
 		return true;
 	}
 }
