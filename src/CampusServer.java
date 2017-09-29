@@ -4,14 +4,20 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 
-public class CampusServer extends UnicastRemoteObject {
+public class CampusServer extends UnicastRemoteObject implements CampusInterface {
 	private static final long serialVersionUID = 1L;
 	private static FileHandler logFileHandler;
 	private static Logger campusLogs;
+	private List<RoomRecord> roomRecords;
+	private static CampusRegistry campus;
 
 	public CampusServer() throws RemoteException {
 		super();
@@ -22,7 +28,6 @@ public class CampusServer extends UnicastRemoteObject {
 		
 		Scanner scan = new Scanner(System.in);
 		String campusName;
-		CampusRegistry campus;
 
 		System.out.println("Enter the name of the campus (no spaces allowed):\n > ");
 		campusName = scan.nextLine();
@@ -85,5 +90,22 @@ public class CampusServer extends UnicastRemoteObject {
 		
 		CampusRegistry campus = new CampusRegistry(name, virtualAddress, code, port);
 		return campus;
+	}
+	
+	public boolean createRoom(int roomNo, Date date, List<TimeSlot> timeSlots) {
+		Random random = new Random();
+		int num = random.nextInt(100000);
+		String roomId = "RR" + String.format("%05d", num);
+		
+		try {
+			RoomRecord room = new RoomRecord(roomId, campus.getCode(), roomNo, date, timeSlots);
+			this.roomRecords = (this.roomRecords == null) ? (new ArrayList<>()) : this.roomRecords;
+			this.roomRecords.add(room);
+			campusLogs.info("One room added with id, " + roomId);
+			return true;
+		} catch (Exception e) {
+			campusLogs.warning("Error adding a room to campus.");
+			return false;
+		}
 	}
 }

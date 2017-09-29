@@ -3,6 +3,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.Scanner;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 
@@ -12,8 +13,11 @@ public class AdminClient {
 		Logger adminClientLogs = Logger.getLogger("Admin Client");
 		AuthenticationInterface authInterface = null;
 		AdminOperations adminOps;
-		String adminId;
+		String adminId, message;
 		CampusRegistry campus;
+		CampusInterface campusInterface = null;
+		boolean isOperationSuccessful = false, isExitRequested = false;
+		int userResponse = 0;
 		
 		try {
 			FileHandler logFileHandler = new FileHandler("admin-client.log", true);
@@ -43,10 +47,53 @@ public class AdminClient {
 		}
 		campus = adminOps.authenticateAdmin(adminId);
 		if (campus == null) {
-			String message = "Admin is not assigned to the campus";
+			message = "Admin is not assigned to the campus";
 			adminClientLogs.warning(message);
 			System.out.println(message + ". Please try again.");
 			return;
 		}
+		
+		// connect to campus server
+		try {
+			Registry campusRegistry = LocateRegistry.getRegistry("localhost", campus.getPort());
+			campusInterface = (CampusInterface) campusRegistry.lookup(campus.getVirtualAddress());
+			adminClientLogs.info("Connection established to " + campus.name);
+		} catch (RemoteException | NotBoundException e) {
+			System.out.println("Unable to connect to server. Please try again!");
+			adminClientLogs.warning("Remote exception detected with message - " + e.getMessage());
+			return;
+		}
+		
+		System.out.println("Welcome to " + campus.name + "\n");
+		
+		Scanner scan = new Scanner(System.in);
+		
+		while (!isExitRequested) {
+			System.out.println("What do you want to do? (enter the number between 1 and 2)\n\t1. Create Room\n\t2. Delete Room\n\tAny other number to Exit\n: > ");
+			userResponse = scan.nextInt();
+			
+			if ((userResponse < 1) || (userResponse > 2)) {
+				adminClientLogs.info("Leaving process with user's permission");
+				System.out.println("Bye Bye");
+				break;
+			}
+			
+			switch (userResponse) {
+				case 1:
+					isOperationSuccessful = adminOps.createRoom(campusInterface);
+					message = isOperationSuccessful ? "A room has successfully been created!" : "Server is facing trouble creating rooms";
+					break;
+				default:
+					isOperationSuccessful = false;
+					message = "Unknown error!";
+			}
+			
+			if (isOperationSuccessful)
+				adminClientLogs.info(message);
+			else
+				adminClientLogs.warning(message);
+		}
+		
+		scan.close();
 	}
 }

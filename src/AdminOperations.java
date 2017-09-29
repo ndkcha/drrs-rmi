@@ -1,4 +1,9 @@
 import java.rmi.RemoteException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Logger;
 
@@ -59,5 +64,47 @@ public class AdminOperations {
 			adminLogs.warning("Remote exception detected while authenticating the admin with message - " + re.getMessage());
 		}
 		return campus;
+	}
+	
+	public boolean createRoom(CampusInterface campusInterface) {
+		List<TimeSlot> timeSlots = new ArrayList<>();
+		int roomNo;
+		String userResponse, fromTime, toTime;
+		Date date = null;
+		boolean isAddTimeslot = true, success = false;
+		Scanner scan = new Scanner(System.in);
+		SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-MM-yyyy");
+		
+		System.out.println("New entry for Room\nEnter room number:\n > ");
+		roomNo = scan.nextInt();
+		System.out.println("Enter date (DD-MM-YYYY):\n > ");
+		userResponse = scan.nextLine();
+		try {
+			date = simpleDateFormat.parse(userResponse);
+		} catch (ParseException e) {
+			adminLogs.warning("Error parsing date taken from user");
+		}
+		
+		// get time slots
+		System.out.println("Add Timeslots:\n");
+		do {
+			System.out.println("From Time (hh:mm):\n > ");
+			fromTime = scan.nextLine();
+			System.out.println("To Time (hh:mm):\n > ");
+			toTime = scan.nextLine();
+			
+			TimeSlot slot = new TimeSlot(fromTime, toTime);
+			timeSlots.add(slot);
+			
+			System.out.println("\nAdd another timeslot? (y/n):\n > ");
+			userResponse = scan.nextLine();
+			
+			isAddTimeslot = userResponse.equalsIgnoreCase("y");
+		} while(isAddTimeslot);
+		
+		success = campusInterface.createRoom(roomNo, date, timeSlots);
+		
+		scan.close();
+		return success;
 	}
 }
