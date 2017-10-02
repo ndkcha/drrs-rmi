@@ -35,4 +35,8 @@ public class RoomRecord {
 	public List<TimeSlot> getTimeSlots() {
 		return this.timeSlots;
 	}
+	
+	public void setTimeSlots(List<TimeSlot> timeSlots) {
+		this.timeSlots = timeSlots;
+	}
 }
