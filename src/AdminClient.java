@@ -15,7 +15,7 @@ public class AdminClient {
 		AdminOperations adminOps;
 		String adminId, message;
 		CampusRegistry campus;
-		CampusInterface campusInterface = null;
+		CampusAdminInterface campusServerInterface = null;
 		boolean isOperationSuccessful = false, isExitRequested = false;
 		int userResponse = 0;
 		
@@ -56,7 +56,7 @@ public class AdminClient {
 		// connect to campus server
 		try {
 			Registry campusRegistry = LocateRegistry.getRegistry("localhost", campus.getPort());
-			campusInterface = (CampusInterface) campusRegistry.lookup(campus.getVirtualAddress());
+			campusServerInterface = (CampusAdminInterface) campusRegistry.lookup(campus.getVirtualAddress());
 			adminClientLogs.info("Connection established to " + campus.name);
 		} catch (RemoteException | NotBoundException e) {
 			System.out.println("Unable to connect to server. Please try again!");
@@ -80,7 +80,7 @@ public class AdminClient {
 			
 			switch (userResponse) {
 				case 1:
-					isOperationSuccessful = adminOps.createRoom(campusInterface);
+					isOperationSuccessful = adminOps.createRoom(campusServerInterface);
 					message = isOperationSuccessful ? "A room has successfully been created!" : "Server is facing trouble creating rooms";
 					break;
 				default:

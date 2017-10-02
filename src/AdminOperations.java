@@ -58,7 +58,7 @@ public class AdminOperations {
 	public CampusRegistry authenticateAdmin(String adminId) {
 		CampusRegistry campus = null;
 		try {
-			campus = authInterface.getCampus(adminId);
+			campus = authInterface.getCampus(adminId, true);
 		} catch (RemoteException re) {
 			System.out.println("Unable to connect to server. Please try again!");
 			adminLogs.warning("Remote exception detected while authenticating the admin with message - " + re.getMessage());
@@ -66,7 +66,7 @@ public class AdminOperations {
 		return campus;
 	}
 	
-	public boolean createRoom(CampusInterface campusInterface) {
+	public boolean createRoom(CampusAdminInterface campusInterface) {
 		List<TimeSlot> timeSlots = new ArrayList<>();
 		int roomNo;
 		String userResponse, fromTime, toTime;

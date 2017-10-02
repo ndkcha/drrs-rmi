@@ -1,10 +1,10 @@
 
 public class Admin {
 	String adminId;
-	String campus;
+	String campusCode;
 	
-	public Admin(String adminId, String campus) {
+	public Admin(String adminId, String campusCode) {
 		this.adminId = adminId;
-		this.campus = campus;
+		this.campusCode = campusCode;
 	}
 }
