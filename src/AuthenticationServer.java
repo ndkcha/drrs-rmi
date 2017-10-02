@@ -13,8 +13,9 @@ public class AuthenticationServer extends UnicastRemoteObject implements Authent
 	private static final long serialVersionUID = 1L;
 	private static FileHandler logFileHandler;
 	private static Logger authLogs = Logger.getLogger("Authentication Server");
-	public List<CampusRegistry> campusRegistries = new ArrayList<>();
-	public List<Admin> admins = new ArrayList<>();
+	private List<CampusRegistry> campusRegistries = new ArrayList<>();
+	private List<Admin> admins = new ArrayList<>();
+	private List<Student> students = new ArrayList<>();
 	
 	public AuthenticationServer() throws RemoteException {
 		super();
@@ -54,14 +55,14 @@ public class AuthenticationServer extends UnicastRemoteObject implements Authent
 			authLogs.warning("Campus " + campus + " not found! Admin cannot be added.");
 			return null;
 		}
-		String adminId = this.generateAdminId(this.campusRegistries.get(campusIndex).getCode());
+		String adminId = this.generateId(this.campusRegistries.get(campusIndex).getCode(), false);
 		while (true) {
 			if (this.isAlreadyAdmin(adminId))
-				adminId = this.generateAdminId(this.campusRegistries.get(campusIndex).getCode());
+				adminId = this.generateId(this.campusRegistries.get(campusIndex).getCode(), false);
 			else
 				break;
 		}
-		Admin admin = new Admin(adminId, campus);
+		Admin admin = new Admin(adminId, this.campusRegistries.get(campusIndex).getCode());
 		this.admins.add(admin);
 		return adminId;
 	}
@@ -74,32 +75,41 @@ public class AuthenticationServer extends UnicastRemoteObject implements Authent
 		return false;
 	}
 	
-	private String generateAdminId(String campusCode) {
+	private String generateId(String campusCode, boolean isItStudent) {
 		Random random = new Random();
 		int num = random.nextInt(100000);
-		String id = String.format("%05d", num);
-		return campusCode.toUpperCase() + id;
+		String id = String.format("%04d", num);
+		return campusCode.toUpperCase() + (isItStudent ? "S" : "A") + id;
 	}
 	
-	public CampusRegistry getCampus(String adminId) {
-		String name = null;
-		for (Admin item : this.admins) {
-			if (item.adminId == adminId) {
-				name = adminId;
-				break;
+	public CampusRegistry getCampus(String id, boolean areYouAdmin) {
+		String campusCode = null;
+		if (areYouAdmin) {
+			for (Admin item : this.admins) {
+				if (item.adminId == id) {
+					campusCode = item.campusCode;
+					break;
+				}
+			}
+		} else {
+			for (Student item : this.students) {
+				if (item.getStudentId() == id) {
+					campusCode = item.getCampusCode();
+					break;
+				}
 			}
 		}
-		if (name == null) {
-			authLogs.warning("Admin is not registered with the system.");
+		if (campusCode == null) {
+			authLogs.warning(((areYouAdmin) ? "Admin" : "Student") + " is not registered with the system.");
 			return null;
 		}
 		for (CampusRegistry item : this.campusRegistries) {
-			if (item.name == name) {
-				authLogs.info("Search request for campus " + name + " has been served.");
+			if (item.getCode() == campusCode) {
+				authLogs.info("Search request for campus " + item.name + " has been served.");
 				return item;
 			}
 		}
-		authLogs.warning("Campus " + name + " not found in the repository.");
+		authLogs.warning("Campus " + campusCode + " not found in the repository.");
 		return null;
 	}
 	
@@ -113,5 +123,75 @@ public class AuthenticationServer extends UnicastRemoteObject implements Authent
 		this.campusRegistries.add(campus);
 		authLogs.info("New campus " + campus.name + "added to the repository.");
 		return true;
+	}
+	
+	public String addStudent(String campus) {
+		boolean campusFound = false;
+		int campusIndex = -1;
+		for (CampusRegistry item : this.campusRegistries) {
+			if (item.name.equalsIgnoreCase(campus)) {
+				campusFound = true;
+				campusIndex = this.campusRegistries.indexOf(item);
+				break;
+			}
+		}
+		if (!campusFound) {
+			authLogs.warning("Campus " + campus + " not found! Student cannot be added.");
+			return null;
+		}
+		String studentId = this.generateId(this.campusRegistries.get(campusIndex).getCode(), true);
+		while (true) {
+			if (this.isAlreadyStudent(studentId))
+				studentId = this.generateId(this.campusRegistries.get(campusIndex).getCode(), true);
+			else
+				break;
+		}
+		
+		Student student = new Student(studentId, this.campusRegistries.get(campusIndex).getCode());
+		this.students.add(student);
+		
+		return studentId;
+	}
+	
+	private boolean isAlreadyStudent(String studentId) {
+		for (Student item : this.students) {
+			if (item.getStudentId() == studentId)
+				return true;
+		}
+		return false;
+	}
+	
+	public boolean canStudentBookRoom(String studentId) {
+		
+		for (Student item : this.students) {
+			if (item.getStudentId().equalsIgnoreCase(studentId)) {
+				return ((item.bookings == null) ? false : (item.bookings.size() < 3));
+			}
+		}
+		
+		return false;
+	}
+	
+	public boolean bookRoom(String studentId, String bookingId) {
+		for (Student item : this.students) {
+			if (item.getStudentId().equalsIgnoreCase(studentId)) {
+				item.bookings = (item.bookings == null) ? (new ArrayList<>()) : item.bookings;
+				if (item.bookings.size() > 3)
+					return false;
+				item.bookings.add(bookingId);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public boolean cancelBooking(String studentId, String bookingId) {
+		for (Student item : this.students) {
+			if (item.getStudentId().equalsIgnoreCase(studentId)) {
+				item.bookings = (item.bookings == null) ? (new ArrayList<>()) : item.bookings;
+				return item.bookings.remove(bookingId);
+			}
+		}
+		return false;
 	}
 }
