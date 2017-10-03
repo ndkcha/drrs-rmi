@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 public class StudentClient {
 
 	public static void main(String args[]) {
-		Logger logs = Logger.getLogger("Admin Client");
+		Logger logs = Logger.getLogger("Student Client");
 		AuthenticationInterface authInterface = null;
 		StudentOperations studentOps;
 		String studentId, message = "";
@@ -18,13 +18,6 @@ public class StudentClient {
 		CampusStudentInterface campusInterface = null;
 		boolean isExitRequested = false, isOperationSuccessful = false;
 		int userResponse = -1;
-		
-		try {
-			FileHandler logFileHandler = new FileHandler("student-client.log", true);
-			logs.addHandler(logFileHandler);
-		} catch (IOException ioe) {
-			System.out.println("Failed to initialize application log system.");
-		}
 		
 		// connect to authentication server
 		try {
@@ -43,6 +36,13 @@ public class StudentClient {
 			logs.warning("Student not found.");
 			System.out.println("No student found. Please try again.");
 			return;
+		}
+		
+		try {
+			FileHandler logFileHandler = new FileHandler("student-" + studentId + "-client.log", true);
+			logs.addHandler(logFileHandler);
+		} catch (IOException ioe) {
+			System.out.println("Failed to initialize application log system.");
 		}
 		
 		campus = studentOps.authenticateStudent(studentId);

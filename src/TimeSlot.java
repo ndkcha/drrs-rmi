@@ -3,6 +3,7 @@ public class TimeSlot {
 	private String endTime;
 	private String bookedBy;
 	
+	
 	public TimeSlot(String startTime, String endTime, String bookedBy) {
 		this.bookedBy = bookedBy;
 		this.startTime = startTime;

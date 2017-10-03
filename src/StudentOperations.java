@@ -19,13 +19,13 @@ public class StudentOperations {
 		Scanner scan = new Scanner(System.in);
 		String studentId = null, userResponse = null;
 		
-		System.out.println("Do you have the student ID? (y/n)\n > ");
+		System.out.println("Do you have the student ID? (y/n)");
 		userResponse = scan.nextLine();
 		
 		if (userResponse.equalsIgnoreCase("n"))
 			studentId = this.addStudent();
 		else {
-			System.out.println("Enter the student id:\n > ");
+			System.out.println("Enter the student id:");
 			studentId = scan.nextLine();
 		}
 		
@@ -37,7 +37,7 @@ public class StudentOperations {
 		Scanner scan = new Scanner(System.in);
 		String userResponse = null, studentId = null;
 		
-		System.out.println("To which campus you go to study?\n > ");
+		System.out.println("To which campus you go to study?");
 		userResponse = scan.nextLine();
 		
 		try {
@@ -73,7 +73,7 @@ public class StudentOperations {
 		TimeSlot slotToBook = null;
 		boolean success = false;
 		
-		System.out.println("Enter the date for which you want to book the room:\n(format: DD-MM-YYYY) e.g. 11-01-2018\n > ");
+		System.out.println("Enter the date for which you want to book the room:\n(format: DD-MM-YYYY) e.g. 11-01-2018");
 		strRepo = scan.nextLine();
 		
 		try {
@@ -106,7 +106,7 @@ public class StudentOperations {
 			return false;
 		}
 		
-		System.out.println("Enter the room number you want to book to know the available timeslots:\n > ");
+		System.out.println("Enter the room number you want to book to know the available timeslots:");
 		intRepo = scan.nextInt();
 		
 		try {
@@ -131,7 +131,7 @@ public class StudentOperations {
 			return false;
 		}
 		
-		System.out.println("Which timeslot you want to book? (enter the corresponding number)\n > ");
+		System.out.println("Which timeslot you want to book? (enter the corresponding number)");
 		intRepo = scan.nextInt();
 		
 		if (intRepo > availableTimeSlots.size()) {
@@ -142,7 +142,7 @@ public class StudentOperations {
 		}
 		
 		slotToBook = availableTimeSlots.get(intRepo);
-		System.out.println("Are you sure you want to book? (y/n)\n > ");
+		System.out.println("Are you sure you want to book? (y/n)");
 		strRepo = scan.nextLine();
 		
 		if (strRepo.equalsIgnoreCase("n")) {
@@ -186,7 +186,7 @@ public class StudentOperations {
 		String bookingId = null;
 		Scanner scan = new Scanner(System.in);
 		
-		System.out.println("Enter the booking id:\n > ");
+		System.out.println("Enter the booking id:");
 		bookingId = scan.nextLine();
 		
 		try {

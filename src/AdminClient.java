@@ -19,13 +19,6 @@ public class AdminClient {
 		boolean isOperationSuccessful = false, isExitRequested = false;
 		int userResponse = 0;
 		
-		try {
-			FileHandler logFileHandler = new FileHandler("admin-client.log", true);
-			adminClientLogs.addHandler(logFileHandler);
-		} catch (IOException ioe) {
-			System.out.println("Failed to initialize application log system.");
-		}
-		
 		// connect to authentication server
 		try {
 			Registry authRegistry = LocateRegistry.getRegistry("localhost", 8008);
@@ -45,6 +38,14 @@ public class AdminClient {
 			System.out.println("No admin found. Please try again.");
 			return;
 		}
+		
+		try {
+			FileHandler logFileHandler = new FileHandler("admin-" + adminId + "-client.log", true);
+			adminClientLogs.addHandler(logFileHandler);
+		} catch (IOException ioe) {
+			System.out.println("Failed to initialize application log system.");
+		}
+		
 		campus = adminOps.authenticateAdmin(adminId);
 		if (campus == null) {
 			message = "Admin is not assigned to the campus";
@@ -69,7 +70,7 @@ public class AdminClient {
 		Scanner scan = new Scanner(System.in);
 		
 		while (!isExitRequested) {
-			System.out.println("What do you want to do? (enter the number between 1 and 2)\n\t1. Create Room\n\t2. Delete Room\n\tAny other number to Exit\n: > ");
+			System.out.println("What do you want to do? (enter the number between 1 and 2)\n\t1. Create Room\n\t2. Delete Room\n\tAny other number to Exit");
 			userResponse = scan.nextInt();
 			
 			if ((userResponse < 1) || (userResponse > 2)) {

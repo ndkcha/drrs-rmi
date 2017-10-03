@@ -27,7 +27,7 @@ public class AdminOperations {
 		if (userResponse.equalsIgnoreCase("n"))
 			adminId = this.addAdmin();
 		else {
-			System.out.println("Enter the admin id:\n > ");
+			System.out.println("Enter the admin id:");
 			adminId = scan.nextLine();
 		}
 		
@@ -41,11 +41,12 @@ public class AdminOperations {
 		String userResponse = null;
 		String adminId = null;
 		
-		System.out.println("For which campus do you want to be the administrator?\n\t- Dorval Campus\n\t- Kirkland Campus\n\t- Westmount Campus\n > ");
+		System.out.println("For which campus do you want to be the administrator?\n\t- Dorval Campus\n\t- Kirkland Campus\n\t- Westmount Campus");
 		userResponse = scan.nextLine();
 		
 		try {
 			adminId = authInterface.addAdmin(userResponse);
+			System.out.println(adminId);
 		} catch (RemoteException re) {
 			System.out.println("Unable to connect to server. Please try again!");
 			adminLogs.warning("Remote exception detected while assigning admin to campus with message - " + re.getMessage());
@@ -75,9 +76,9 @@ public class AdminOperations {
 		Scanner scan = new Scanner(System.in);
 		SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-MM-yyyy");
 		
-		System.out.println("New entry for Room\nEnter room number:\n > ");
+		System.out.println("New entry for Room\nEnter room number:");
 		roomNo = scan.nextInt();
-		System.out.println("Enter date (DD-MM-YYYY):\n > ");
+		System.out.println("Enter date (DD-MM-YYYY):");
 		userResponse = scan.nextLine();
 		try {
 			date = simpleDateFormat.parse(userResponse);
@@ -88,21 +89,25 @@ public class AdminOperations {
 		// get time slots
 		System.out.println("Add Timeslots:\n");
 		do {
-			System.out.println("From Time (hh:mm):\n > ");
+			System.out.println("From Time (hh:mm):");
 			fromTime = scan.nextLine();
-			System.out.println("To Time (hh:mm):\n > ");
+			System.out.println("To Time (hh:mm):");
 			toTime = scan.nextLine();
 			
 			TimeSlot slot = new TimeSlot(fromTime, toTime);
 			timeSlots.add(slot);
 			
-			System.out.println("\nAdd another timeslot? (y/n):\n > ");
+			System.out.println("\nAdd another timeslot? (y/n):");
 			userResponse = scan.nextLine();
 			
 			isAddTimeslot = userResponse.equalsIgnoreCase("y");
 		} while(isAddTimeslot);
 		
-		success = campusInterface.createRoom(roomNo, date, timeSlots);
+		try {
+			success = campusInterface.createRoom(roomNo, date, timeSlots);
+		} catch (RemoteException re) {
+			adminLogs.warning(re.getMessage());
+		}
 		
 		scan.close();
 		return success;

@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 public class CampusServer extends UnicastRemoteObject implements CampusAdminInterface, CampusStudentInterface {
 	private static final long serialVersionUID = 1L;
 	private static FileHandler logFileHandler;
-	private static Logger campusLogs;
+	private static Logger campusLogs = Logger.getLogger("Campus Server");
 	private List<RoomRecord> roomRecords = null;
 	private static CampusRegistry campus;
 	private List<Booking> bookings = null;
@@ -30,7 +30,7 @@ public class CampusServer extends UnicastRemoteObject implements CampusAdminInte
 		Scanner scan = new Scanner(System.in);
 		String campusName;
 
-		System.out.println("Enter the name of the campus (no spaces allowed):\n > ");
+		System.out.println("Enter the name of the campus (no spaces allowed):");
 		campusName = scan.nextLine();
 		
 		campus = askCampusDetails(campusName, scan);
@@ -38,7 +38,7 @@ public class CampusServer extends UnicastRemoteObject implements CampusAdminInte
 		scan.close();
 		
 		try {
-			logFileHandler = new FileHandler(campusName + "-server.log", true);
+			logFileHandler = new FileHandler(campusName.replace(" ", "-").toLowerCase() + "-server.log", true);
 			campusLogs.addHandler(logFileHandler);
 		} catch (IOException ioe) {
 			System.out.println("Failed to initialize application log system.");
@@ -79,14 +79,15 @@ public class CampusServer extends UnicastRemoteObject implements CampusAdminInte
 	}
 	
 	private static CampusRegistry askCampusDetails(String name, Scanner scan) {
-		String virtualAddress, code;
+		String virtualAddress, code = null;
 		int port;
 		
-		System.out.println("Enter the virtual address for " + name + " server:\n > ");
+		System.out.println("Enter the virtual address for " + name + " server:");
 		virtualAddress = scan.nextLine();
-		System.out.println("Enter the port number for the server:\n > ");
+		System.out.println("Enter the port number for the server:");
 		port = scan.nextInt();
-		System.out.println("Enter the three letter code for the " + name + "(to be used for clientIds, no spaces allowed):\n > ");
+		System.out.println("Enter the three letter code for the " + name + "(to be used for clientIds, no spaces allowed):");
+		scan.nextLine();
 		code = scan.nextLine();
 		
 		CampusRegistry campus = new CampusRegistry(name, virtualAddress, code, port);
