@@ -1,4 +1,4 @@
-package data;
+package schema;
 
 public class TimeSlot {
     private String bookingId;

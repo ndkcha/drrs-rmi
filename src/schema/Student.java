@@ -1,4 +1,4 @@
-package data;
+package schema;
 
 import java.util.List;
 

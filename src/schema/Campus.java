@@ -1,4 +1,4 @@
-package data;
+package schema;
 
 public class Campus {
     private int port;
