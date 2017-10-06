@@ -55,7 +55,7 @@ public class AuthOperations extends UnicastRemoteObject implements AuthInterface
         if (adminIndex < 0)
             return null;
 
-        campusCode = adminId.substring(0, 2).toUpperCase();
+        campusCode = adminId.substring(0, 3).toUpperCase();
 
         for (Campus item : this.campuses) {
             if (item.getCode().equalsIgnoreCase(campusCode))
