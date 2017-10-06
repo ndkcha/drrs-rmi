@@ -33,7 +33,7 @@ public class CampusServer {
         // set up the logging mechanism
         logs = Logger.getLogger(campusName + " Server");
         try {
-            fileHandler = new FileHandler(campusName.replace(" ", "-").toLowerCase(), true);
+            fileHandler = new FileHandler(campusName.replace(" ", "-").toLowerCase() + ".log", true);
             logs.addHandler(fileHandler);
         } catch(IOException ioe) {
             logs.warning("Failed to create handler for log file.\n Message: " + ioe.getMessage());

@@ -4,6 +4,7 @@ import auth.AuthOperations;
 import schema.AuthUdpPacket;
 import schema.Campus;
 import schema.Student;
+import schema.TimeSlot;
 
 import java.io.*;
 import java.net.DatagramPacket;
@@ -12,16 +13,14 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.logging.Logger;
 
-public class CampusOperations extends UnicastRemoteObject {
+public class CampusOperations extends UnicastRemoteObject implements CampusAdminOperations {
     private Campus campus;
     private Logger logs;
     private List<Student> students = new ArrayList<>();
+    private HashMap<Date, HashMap<Integer, List<TimeSlot>>> roomRecords = new HashMap<>();
 
     public CampusOperations(Logger logs) throws RemoteException {
         super();
@@ -90,6 +89,33 @@ public class CampusOperations extends UnicastRemoteObject {
         } catch (ClassNotFoundException e) {
             logs.warning("Error parsing the response from auth server.\nMessage: " + e.getMessage());
         }
+    }
+
+    public boolean createRoom(Date date, int roomNo, List<TimeSlot> timeSlots) {
+        boolean isOperationDone = false;
+
+        if (roomRecords.containsKey(date)) {
+            HashMap<Integer, List<TimeSlot>> room = roomRecords.get(date);
+            if (room.containsKey(roomNo)) {
+                List<TimeSlot> slots = room.get(roomNo);
+                for (TimeSlot slot : timeSlots) {
+                    if (!slots.contains(slot)) {
+                        isOperationDone = true;
+                        slots.add(slot);
+                    }
+                }
+            } else {
+                room.put(roomNo, timeSlots);
+                isOperationDone = true;
+            }
+        } else {
+            HashMap<Integer, List<TimeSlot>> room = new HashMap<>();
+            room.put(roomNo, timeSlots);
+            roomRecords.put(date, room);
+            isOperationDone = true;
+        }
+
+        return isOperationDone;
     }
 
     public byte[] serialize(Object obj) throws IOException {
