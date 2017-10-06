@@ -1,18 +1,16 @@
 package server;
 
-import auth.AuthInterface;
-import auth.AuthOperations;
-import schema.AuthUdpPacket;
+import auth.AuthAdminInterface;
 import schema.Campus;
 
 import java.io.IOException;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.HashMap;
 import java.util.Scanner;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
@@ -20,7 +18,7 @@ import java.util.logging.Logger;
 public class CampusServer {
     private static FileHandler fileHandler;
     private static Logger logs;
-    private static AuthInterface authInterface;
+    private static AuthAdminInterface authInterface;
 
     public static void main(String args[]) {
         Scanner scan = new Scanner(System.in);
@@ -56,6 +54,25 @@ public class CampusServer {
         } catch (RemoteException | AlreadyBoundException e) {
             logs.warning("Failed to start server.\nMessage: " + e.getMessage());
             return;
+        }
+
+        // start the udp server
+        try {
+            DatagramSocket udpSocket = new DatagramSocket(campus.getUdpPort());
+            byte[] incoming = new byte[10000];
+            logs.info("The UDP server for " + campus.name + " is up and running on port 8009");
+            while (true) {
+                DatagramPacket packet = new DatagramPacket(incoming, incoming.length);
+                try {
+                    udpSocket.receive(packet);
+                    CampusUdpProc proc = new CampusUdpProc(udpSocket, packet, campusOps, logs);
+                    proc.start();
+                } catch (IOException ioe) {
+                    logs.warning("Error receiving packet.\nMessage: " + ioe.getMessage());
+                }
+            }
+        } catch (SocketException e) {
+            logs.warning("Exception thrown while server was running/trying to start.\nMessage: " + e.getMessage());
         }
 
         // connect to auth server
