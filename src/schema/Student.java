@@ -1,6 +1,7 @@
 package schema;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Student implements Serializable {
@@ -9,6 +10,7 @@ public class Student implements Serializable {
 
     public Student(String studentId) {
         this.studentId = studentId;
+        this.bookingIds = new ArrayList<>();
     }
 
     public String getStudentId() {
