@@ -1,6 +1,9 @@
 package schema;
 
-public class Campus {
+import java.io.Serializable;
+
+public class Campus implements Serializable {
+    private static final long serialVersionUID = 1L;
     private int port;
     private String virtualAddress, code;
     public String name;
