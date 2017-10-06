@@ -22,12 +22,12 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
     private List<Student> students = new ArrayList<>();
     private HashMap<Date, HashMap<Integer, List<TimeSlot>>> roomRecords = new HashMap<>();
 
-    public CampusOperations(Logger logs) throws RemoteException {
+    CampusOperations(Logger logs) throws RemoteException {
         super();
         this.logs = logs;
     }
 
-    public Campus setUpCampus(String name, Scanner scan) {
+    Campus setUpCampus(String name, Scanner scan) {
         String virtualAddress, code;
         int port, udpPort;
 
@@ -48,7 +48,7 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
         return campus;
     }
 
-    public void registerCampus() {
+    void registerCampus() {
         // connect to auth server and register campus
         try {
             String message;
@@ -104,29 +104,38 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
                 List<TimeSlot> slots = room.get(roomNo);
                 for (TimeSlot slot : timeSlots) {
                     if (!slots.contains(slot)) {
-                        isOperationDone = true;
                         slots.add(slot);
+                        isOperationDone = true;
                     }
                 }
             } else {
                 room.put(roomNo, timeSlots);
+                logs.info("Time Slots has been added to the room.");
                 isOperationDone = true;
             }
         } else {
             HashMap<Integer, List<TimeSlot>> room = new HashMap<>();
             room.put(roomNo, timeSlots);
             roomRecords.put(date, room);
+            logs.info("New room has been created!");
             isOperationDone = true;
         }
+
+        if (!isOperationDone)
+            logs.warning("Failed to create new room. Record already exists!");
 
         return isOperationDone;
     }
 
     public boolean lookupStudent(String studentId) {
         for (Student student : this.students) {
-            if (student.getStudentId().equalsIgnoreCase(studentId))
+            if (student.getStudentId().equalsIgnoreCase(studentId)) {
+                logs.info("The look up request for student " + studentId + " has successfully been served!");
                 return true;
+            }
         }
+
+        logs.warning("Could not find the student with id, " + studentId);
         return false;
     }
 
@@ -136,6 +145,8 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
         String studentId = campus.getCode().toUpperCase() + "S" + String.format("%04d", num);
         Student student = new Student(studentId);
         this.students.add(student);
+
+        logs.info("New student has been added to the campus with id, " + studentId);
         return studentId;
     }
 
@@ -146,6 +157,11 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
         map.put(campus.getCode(), this.totalAvailableTimeSlots(date));
 
         List<Campus> campuses = getListOfCampuses();
+
+        if (campuses == null) {
+            logs.warning("No other campus(es) found!");
+            return map;
+        }
 
         for (Campus item : campuses) {
             if (item.getCode().equalsIgnoreCase(this.campus.getCode()))
@@ -223,7 +239,7 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
         return null;
     }
 
-    public int totalAvailableTimeSlots(Date date) {
+    int totalAvailableTimeSlots(Date date) {
         int total = 0;
 
         if (!this.roomRecords.containsKey(date))
@@ -242,7 +258,7 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
         return total;
     }
 
-    public String bookRoomExtCampus(String studentId, int roomNumber, Date date, TimeSlot timeSlot) {
+    String bookRoomExtCampus(String studentId, int roomNumber, Date date, TimeSlot timeSlot) {
         String bookingId = null;
 
         if (this.roomRecords.containsKey(date)) {
@@ -263,6 +279,8 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
                         slots.set(itemIndex, item);
                         room.put(roomNumber, slots);
                         this.roomRecords.put(date, room);
+
+                        logs.info("New booking has been created under " + studentId + " with id, " + bookingId);
                         break;
                     }
                 }
@@ -309,6 +327,8 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
                             room.put(roomNo, slots);
                             this.roomRecords.put(date, room);
                             this.students.set(studentIndex, student);
+
+                            logs.info("New booking has been created under " + studentId + " with id, " + bookingId);
                             break;
                         }
                     }
@@ -320,6 +340,7 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
             if (bookingId != null) {
                 student.bookingIds.add(bookingId);
                 this.students.set(studentIndex, student);
+                logs.info("New booking has been created under " + studentId + " with id, " + bookingId);
             }
         }
 
@@ -410,6 +431,7 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
                         slot.setBookingId(null);
                         slot.bookedBy = null;
 
+                        logs.info("Booking with id, " + bookingId + " has been cancelled by " + studentId);
                         success = true;
                         break;
                     }
@@ -454,6 +476,8 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
 
                             student.bookingIds.remove(bookingIndex);
                             this.students.set(studentIndex, student);
+
+                            logs.info("Booking with id, " + bookingId + " has been cancelled by " + studentId);
                             success = true;
                             break;
                         }
@@ -471,6 +495,7 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
                 int bookingIndex = student.bookingIds.indexOf(bookingId);
                 student.bookingIds.remove(bookingIndex);
                 this.students.set(studentIndex, student);
+                logs.info("Booking with id, " + bookingId + " has been cancelled by " + studentId);
             }
         }
 
@@ -549,6 +574,7 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
                     }
                 }
                 rooms.put(roomNo, extSlots);
+                logs.info("The record has successfully been removed!");
                 success = true;
             }
         }
@@ -567,6 +593,8 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
                 student.bookingIds.remove(bookingIndex);
 
                 this.students.set(studentIndex, student);
+
+                logs.info("Booking with id, " + bookingId + " has been cancelled by " + studentId);
                 success = true;
                 break;
             }
