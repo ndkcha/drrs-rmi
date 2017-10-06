@@ -1,6 +1,8 @@
 package schema;
 
-public class TimeSlot {
+import java.io.Serializable;
+
+public class TimeSlot implements Serializable {
     private String bookingId;
     public String startTime, endTime, bookedBy;
 
