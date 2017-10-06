@@ -1,11 +1,12 @@
 package auth;
 
-import schema.AuthUdpPacket;
+import schema.UdpPacket;
 import schema.Campus;
 
 import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class AuthUdpProc implements Runnable {
@@ -25,7 +26,9 @@ public class AuthUdpProc implements Runnable {
     @Override
     public void run() {
         try {
-            AuthUdpPacket udpPacket = (AuthUdpPacket) deserialize(this.packet.getData());
+            UdpPacket udpPacket = (UdpPacket) deserialize(this.packet.getData());
+            byte[] outgoing;
+            DatagramPacket res;
             switch (udpPacket.operationName) {
                 case AuthOperations.ADD_CAMPUS.OP_CODE:
                     Campus campus = (Campus) udpPacket.body.get(AuthOperations.ADD_CAMPUS.BODY_CAMPUS);
@@ -35,14 +38,24 @@ public class AuthUdpProc implements Runnable {
                         logs.info("Request has been processed successfully for campus: " + campus.name);
                     } else
                         logs.warning("Error parsing campus code. Failure response has been sent to the client.");
-                    byte[] outgoing = serialize(message);
-                    DatagramPacket res = new DatagramPacket(outgoing, outgoing.length, this.packet.getAddress(), this.packet.getPort());
-                    this.server.send(res);
+                    outgoing = serialize(message);
+                    break;
+                case AuthOperations.LIST_CAMPUS.OP_CODE:
+                    List<Campus> campuses = authOperations.getCampuses();
+                    outgoing = serialize(campuses);
+                    break;
+                case AuthOperations.UDP_PORT.OP_CODE:
+                    String code = (String) udpPacket.body.get(AuthOperations.UDP_PORT.BODY_CODE);
+                    int udpPort = authOperations.getUdpPort(code);
+                    outgoing = serialize(udpPort);
                     break;
                 default:
+                    outgoing = serialize("Error");
                     logs.warning("Operation not found!");
                     break;
             }
+            res = new DatagramPacket(outgoing, outgoing.length, this.packet.getAddress(), this.packet.getPort());
+            this.server.send(res);
         } catch (IOException ioe) {
             logs.warning("Error reading the packet.\nMessage: " + ioe.getMessage());
         } catch (ClassNotFoundException e) {

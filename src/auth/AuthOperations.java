@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.logging.Logger;
 
-public class AuthOperations extends UnicastRemoteObject implements AuthInterface {
+public class AuthOperations extends UnicastRemoteObject implements AuthAdminInterface, AuthStudentInterface {
     private List<String> admins = new ArrayList<>();
     private List<Campus> campuses = new ArrayList<>();
     private Logger logs;
@@ -31,6 +31,7 @@ public class AuthOperations extends UnicastRemoteObject implements AuthInterface
             }
 
             this.campuses.add(campus);
+            logs.info("The campus " + campus.name + " has been added successfully!");
 
             return true;
         }
@@ -39,13 +40,18 @@ public class AuthOperations extends UnicastRemoteObject implements AuthInterface
     public synchronized String addAdmin(String campusCode) {
         synchronized (adminLock) {
             Random random = new Random();
-            int num = random.nextInt(100000);
+            int num = random.nextInt(10000);
             String adminId = campusCode.toUpperCase() + "A" + String.format("%04d", num);
 
             this.admins.add(adminId);
+            logs.info("The admin " + adminId + " has been added successfully!");
 
             return adminId;
         }
+    }
+
+    public List<Campus> getCampuses() {
+        return this.campuses;
     }
 
     public Campus getCampus(String adminId) {
@@ -58,15 +64,48 @@ public class AuthOperations extends UnicastRemoteObject implements AuthInterface
         campusCode = adminId.substring(0, 3).toUpperCase();
 
         for (Campus item : this.campuses) {
-            if (item.getCode().equalsIgnoreCase(campusCode))
+            if (item.getCode().equalsIgnoreCase(campusCode)) {
+                logs.info("The request by " + adminId + " has been served successfully!");
+                return item;
+            }
+        }
+
+        logs.warning("The campus requested by " + adminId + " does not exist in records!");
+        return null;
+    }
+
+    public Campus lookupCampus(String code) {
+        for (Campus item : this.campuses) {
+            if (item.getCode().equalsIgnoreCase(code))
                 return item;
         }
 
         return null;
     }
 
+    public int getUdpPort(String code) {
+        for (Campus item : this.campuses) {
+            if (item.getCode().equalsIgnoreCase(code)) {
+                logs.info("The udp port is requested!");
+                return item.getUdpPort();
+            }
+        }
+
+        logs.warning("Could not complete the request for udp port. No campus found for " + code);
+        return -1;
+    }
+
     public static abstract class ADD_CAMPUS {
         public static final int OP_CODE = 0;
         public static final String BODY_CAMPUS = "campus";
+    }
+
+    public static abstract class LIST_CAMPUS {
+        public static final int OP_CODE = 1;
+    }
+
+    public static abstract class UDP_PORT {
+        public static final int OP_CODE = 2;
+        public static final String BODY_CODE = "code";
     }
 }
