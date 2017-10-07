@@ -22,7 +22,7 @@ public class AdminClient {
         String adminId, message;
         Campus campus;
         CampusAdminOperations campusAdminOperations;
-        int choice = -1;
+        int choice;
         boolean isOperationSuccessful;
 
         Scanner scan = new Scanner(System.in);
@@ -42,6 +42,7 @@ public class AdminClient {
         // get adminId
         adminId = adminOps.askAdminId(scan);
 
+        // set up file handler for logging mechanism.
         try {
             FileHandler handler = new FileHandler(adminId + ".log", true);
             logs.addHandler(handler);
