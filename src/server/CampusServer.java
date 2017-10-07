@@ -46,6 +46,9 @@ public class CampusServer {
 
         campus = campusOps.setUpCampus(campusName, scan);
 
+        // connect to auth server
+        campusOps.registerCampus();
+
         // start server
         try {
             Registry registry = LocateRegistry.createRegistry(campus.getPort());
@@ -60,7 +63,7 @@ public class CampusServer {
         try {
             DatagramSocket udpSocket = new DatagramSocket(campus.getUdpPort());
             byte[] incoming = new byte[10000];
-            logs.info("The UDP server for " + campus.name + " is up and running on port 8009");
+            logs.info("The UDP server for " + campus.name + " is up and running on port " + campus.getUdpPort());
             while (true) {
                 DatagramPacket packet = new DatagramPacket(incoming, incoming.length);
                 try {
@@ -74,9 +77,6 @@ public class CampusServer {
         } catch (SocketException e) {
             logs.warning("Exception thrown while server was running/trying to start.\nMessage: " + e.getMessage());
         }
-
-        // connect to auth server
-        campusOps.registerCampus();
 
         scan.close();
     }

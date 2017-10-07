@@ -92,8 +92,13 @@ public class StudentOperations {
         try {
             String bookingId = campusStudentOperations.bookRoom(studentId, code, roomNo, date, slot);
             if (bookingId != null) {
-                success = true;
-                System.out.println("Your booking id: " + bookingId);
+                if (bookingId.startsWith("BKG")) {
+                    success = true;
+                    System.out.println("Your booking id: " + bookingId);
+                } else {
+                    success = false;
+                    logs.warning(bookingId);
+                }
             }
         } catch (RemoteException re) {
             logs.warning("Remote exception while booking room.\nMessage: " + re.getMessage());

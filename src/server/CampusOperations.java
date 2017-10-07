@@ -21,6 +21,8 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
     private Logger logs;
     private List<Student> students = new ArrayList<>();
     private HashMap<Date, HashMap<Integer, List<TimeSlot>>> roomRecords = new HashMap<>();
+    private static final Object studentLock = new Object();
+    private static final Object roomLock = new Object();
 
     CampusOperations(Logger logs) throws RemoteException {
         super();
@@ -96,35 +98,39 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
     }
 
     public boolean createRoom(Date date, int roomNo, List<TimeSlot> timeSlots) {
-        boolean isOperationDone = false;
+        synchronized (roomLock) {
+            boolean isOperationDone = false;
 
-        if (roomRecords.containsKey(date)) {
-            HashMap<Integer, List<TimeSlot>> room = roomRecords.get(date);
-            if (room.containsKey(roomNo)) {
-                List<TimeSlot> slots = room.get(roomNo);
-                for (TimeSlot slot : timeSlots) {
-                    if (!slots.contains(slot)) {
-                        slots.add(slot);
-                        isOperationDone = true;
+            if (roomRecords.containsKey(date)) {
+                HashMap<Integer, List<TimeSlot>> room = roomRecords.get(date);
+                boolean isRoomExists = false;
+                if (room.containsKey(roomNo)) {
+                    isRoomExists = true;
+                    List<TimeSlot> slots = room.get(roomNo);
+                    for (TimeSlot slot : timeSlots) {
+                        if (!slots.contains(slot)) {
+                            slots.add(slot);
+                            isOperationDone = true;
+                        }
                     }
+                } else {
+                    room.put(roomNo, timeSlots);
+                    logs.info(isRoomExists ? "Time slots have been added to the room." : "New room has been created!");
+                    isOperationDone = true;
                 }
             } else {
+                HashMap<Integer, List<TimeSlot>> room = new HashMap<>();
                 room.put(roomNo, timeSlots);
-                logs.info("Time Slots has been added to the room.");
+                roomRecords.put(date, room);
+                logs.info("New room has been created!");
                 isOperationDone = true;
             }
-        } else {
-            HashMap<Integer, List<TimeSlot>> room = new HashMap<>();
-            room.put(roomNo, timeSlots);
-            roomRecords.put(date, room);
-            logs.info("New room has been created!");
-            isOperationDone = true;
+
+            if (!isOperationDone)
+                logs.warning("Failed to create new room. Record already exists!");
+
+            return isOperationDone;
         }
-
-        if (!isOperationDone)
-            logs.warning("Failed to create new room. Record already exists!");
-
-        return isOperationDone;
     }
 
     public boolean lookupStudent(String studentId) {
@@ -140,14 +146,16 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
     }
 
     public String generateStudentId() {
-        Random random = new Random();
-        int num = random.nextInt(10000);
-        String studentId = campus.getCode().toUpperCase() + "S" + String.format("%04d", num);
-        Student student = new Student(studentId);
-        this.students.add(student);
+        synchronized (studentLock) {
+            Random random = new Random();
+            int num = random.nextInt(10000);
+            String studentId = campus.getCode().toUpperCase() + "S" + String.format("%04d", num);
+            Student student = new Student(studentId);
+            this.students.add(student);
 
-        logs.info("New student has been added to the campus with id, " + studentId);
-        return studentId;
+            logs.info("New student has been added to the campus with id, " + studentId);
+            return studentId;
+        }
     }
 
     public HashMap<String, Integer> availableTimeSlots(Date date) {
@@ -251,7 +259,7 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
             List<TimeSlot> slots = entry.getValue();
 
             for (TimeSlot item : slots) {
-                total += ((item.bookedBy == null) ? 1 : 0);
+                total += ((item.getBookingId() == null) ? 1 : 0);
             }
         }
 
@@ -259,35 +267,37 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
     }
 
     String bookRoomExtCampus(String studentId, int roomNumber, Date date, TimeSlot timeSlot) {
-        String bookingId = null;
+        synchronized (roomLock) {
+            String bookingId = null;
 
-        if (this.roomRecords.containsKey(date)) {
-            HashMap<Integer, List<TimeSlot>> room = this.roomRecords.get(date);
-            if (room.containsKey(roomNumber)) {
-                List<TimeSlot> slots = room.get(roomNumber);
-                for (TimeSlot item : slots) {
-                    if (item.startTime.equalsIgnoreCase(timeSlot.startTime) && (item.endTime.equalsIgnoreCase(timeSlot.endTime)) && (item.bookedBy == null)) {
-                        int itemIndex = slots.indexOf(item);
-                        Random random = new Random();
-                        int num = random.nextInt(10000);
+            if (this.roomRecords.containsKey(date)) {
+                HashMap<Integer, List<TimeSlot>> room = this.roomRecords.get(date);
+                if (room.containsKey(roomNumber)) {
+                    List<TimeSlot> slots = room.get(roomNumber);
+                    for (TimeSlot item : slots) {
+                        if (item.startTime.equalsIgnoreCase(timeSlot.startTime) && (item.endTime.equalsIgnoreCase(timeSlot.endTime)) && (item.bookedBy == null)) {
+                            int itemIndex = slots.indexOf(item);
+                            Random random = new Random();
+                            int num = random.nextInt(10000);
 
-                        bookingId = "BKG" + campus.getCode().toUpperCase() + String.format("%04d", num);
-                        item.setBookingId(bookingId);
-                        item.bookedBy = studentId;
+                            bookingId = "BKG" + campus.getCode().toUpperCase() + String.format("%04d", num);
+                            item.setBookingId(bookingId);
+                            item.bookedBy = studentId;
 
-                        // reflect
-                        slots.set(itemIndex, item);
-                        room.put(roomNumber, slots);
-                        this.roomRecords.put(date, room);
+                            // reflect
+                            slots.set(itemIndex, item);
+                            room.put(roomNumber, slots);
+                            this.roomRecords.put(date, room);
 
-                        logs.info("New booking has been created under " + studentId + " with id, " + bookingId);
-                        break;
+                            logs.info("New booking has been created under " + studentId + " with id, " + bookingId);
+                            break;
+                        }
                     }
                 }
             }
-        }
 
-        return bookingId;
+            return bookingId;
+        }
     }
 
     public String bookRoom(String studentId, String code, int roomNo, Date date, TimeSlot slot) {
@@ -303,8 +313,8 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
             }
         }
 
-        if ((studentIndex < 0) || (student.bookingIds.size() == 3))
-            return null;
+        if ((studentIndex < 0) || (student.bookingIds.size() > 3))
+            return "You can not book anymore!";
 
         if (code.equalsIgnoreCase(campus.getCode())) {
             if (this.roomRecords.containsKey(date)) {
@@ -317,16 +327,19 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
                             Random random = new Random();
                             int num = random.nextInt(10000);
 
-                            bookingId = "BKG" + campus.getCode().toUpperCase() + String.format("%04d", num);
-                            item.setBookingId(bookingId);
-                            item.bookedBy = studentId;
-                            student.bookingIds.add(bookingId);
+                            synchronized (roomLock) {
+                                bookingId = "BKG" + campus.getCode().toUpperCase() + String.format("%04d", num);
+                                item.setBookingId(bookingId);
+                                item.bookedBy = studentId;
+                                slots.set(itemIndex, item);
+                                room.put(roomNo, slots);
+                                this.roomRecords.put(date, room);
+                            }
 
-                            // reflect
-                            slots.set(itemIndex, item);
-                            room.put(roomNo, slots);
-                            this.roomRecords.put(date, room);
-                            this.students.set(studentIndex, student);
+                            synchronized (studentLock) {
+                                student.bookingIds.add(bookingId);
+                                this.students.set(studentIndex, student);
+                            }
 
                             logs.info("New booking has been created under " + studentId + " with id, " + bookingId);
                             break;
@@ -338,8 +351,10 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
             int udpPort = getUdpPort(code);
             bookingId = bookRoomOnOtherCampus(studentId, roomNo, date, slot, udpPort);
             if (bookingId != null) {
-                student.bookingIds.add(bookingId);
-                this.students.set(studentIndex, student);
+                synchronized (studentLock) {
+                    student.bookingIds.add(bookingId);
+                    this.students.set(studentIndex, student);
+                }
                 logs.info("New booking has been created under " + studentId + " with id, " + bookingId);
             }
         }
@@ -420,30 +435,51 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
     }
 
     public boolean cancelBookingExtCampus(String studentId, String bookingId) {
-        boolean success = false;
+        synchronized (roomLock) {
+            boolean success = false;
+            List<TimeSlot> timeSlots = null;
+            int room = -1;
+            Date date = null;
 
-        for (Map.Entry<Date, HashMap<Integer, List<TimeSlot>>> entry : this.roomRecords.entrySet()) {
-            HashMap<Integer, List<TimeSlot>> value = entry.getValue();
-            for (Map.Entry<Integer, List<TimeSlot>> e : value.entrySet()) {
-                List<TimeSlot> slots = e.getValue();
-                for (TimeSlot slot : slots) {
-                    if (slot.getBookingId().equalsIgnoreCase(bookingId) && (studentId.equalsIgnoreCase(slot.bookedBy))) {
-                        slot.setBookingId(null);
-                        slot.bookedBy = null;
+            for (Map.Entry<Date, HashMap<Integer, List<TimeSlot>>> entry : this.roomRecords.entrySet()) {
+                Date dt = entry.getKey();
+                HashMap<Integer, List<TimeSlot>> value = entry.getValue();
+                for (Map.Entry<Integer, List<TimeSlot>> e : value.entrySet()) {
+                    int roomNo = e.getKey();
+                    List<TimeSlot> slots = e.getValue();
+                    for (TimeSlot slot : slots) {
+                        if ((slot.getBookingId() != null) && (slot.bookedBy != null) && slot.getBookingId().equalsIgnoreCase(bookingId) && (studentId.equalsIgnoreCase(slot.bookedBy))) {
+                            int slotIndex = slots.indexOf(slot);
+                            slot.setBookingId(null);
+                            slot.bookedBy = null;
 
-                        logs.info("Booking with id, " + bookingId + " has been cancelled by " + studentId);
-                        success = true;
+                            slots.set(slotIndex, slot);
+                            timeSlots = slots;
+                            logs.info("Booking with id, " + bookingId + " has been cancelled by " + studentId);
+                            success = true;
+                            break;
+                        }
+                    }
+                    if (success) {
+                        room = roomNo;
                         break;
                     }
                 }
-                if (success)
+                if (success) {
+                    date = dt;
                     break;
+                }
             }
-            if (success)
-                break;
-        }
 
-        return success;
+            if (success) {
+                HashMap<Integer, List<TimeSlot>> rooms = this.roomRecords.get(date);
+                rooms.put(room, timeSlots);
+
+                this.roomRecords.put(date, rooms);
+            }
+
+            return success;
+        }
     }
 
     public boolean cancelBooking(String studentId, String bookingId) {
@@ -464,29 +500,53 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
             return false;
 
         if (code.equalsIgnoreCase(campus.getCode())) {
+            List<TimeSlot> timeSlots = null;
+            int room = -1;
+            Date date = null;
+
             for (Map.Entry<Date, HashMap<Integer, List<TimeSlot>>> entry : this.roomRecords.entrySet()) {
+                Date dt = entry.getKey();
                 HashMap<Integer, List<TimeSlot>> value = entry.getValue();
                 for (Map.Entry<Integer, List<TimeSlot>> e : value.entrySet()) {
+                    int roomNo = e.getKey();
                     List<TimeSlot> slots = e.getValue();
                     for (TimeSlot slot : slots) {
-                        if (slot.getBookingId().equalsIgnoreCase(bookingId) && (studentId.equalsIgnoreCase(slot.bookedBy))) {
+                        if ((slot.getBookingId() != null) && (slot.bookedBy != null) && slot.getBookingId().equalsIgnoreCase(bookingId) && (studentId.equalsIgnoreCase(slot.bookedBy))) {
                             int bookingIndex = student.bookingIds.indexOf(bookingId);
+                            int slotIndex = slots.indexOf(slot);
                             slot.setBookingId(null);
                             slot.bookedBy = null;
 
-                            student.bookingIds.remove(bookingIndex);
-                            this.students.set(studentIndex, student);
+                            synchronized (studentLock) {
+                                student.bookingIds.remove(bookingIndex);
+                                this.students.set(studentIndex, student);
+                            }
 
+                            slots.set(slotIndex, slot);
+                            timeSlots = slots;
                             logs.info("Booking with id, " + bookingId + " has been cancelled by " + studentId);
                             success = true;
                             break;
                         }
                     }
-                    if (success)
+                    if (success) {
+                        room = roomNo;
                         break;
+                    }
                 }
-                if (success)
+                if (success) {
+                    date = dt;
                     break;
+                }
+            }
+
+            synchronized (roomLock) {
+                if (success) {
+                    HashMap<Integer, List<TimeSlot>> rooms = this.roomRecords.get(date);
+                    rooms.put(room, timeSlots);
+
+                    this.roomRecords.put(date, rooms);
+                }
             }
         } else {
             int udpPort = getUdpPort(code);
@@ -540,6 +600,7 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
 
     public boolean deleteRoom(int roomNo, Date date, List<TimeSlot> delSlots) {
         boolean success = false;
+        List<TimeSlot> slotsToDelete = new ArrayList<>();
 
         if (this.roomRecords.containsKey(date)) {
             HashMap<Integer, List<TimeSlot>> rooms = this.roomRecords.get(date);
@@ -550,15 +611,17 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
                     for (TimeSlot delSlot : delSlots) {
                         if (extSlot.startTime.equalsIgnoreCase(delSlot.startTime) && extSlot.endTime.equalsIgnoreCase(delSlot.endTime)) {
                             extSlotIndex = extSlots.indexOf(extSlot);
-                            if (extSlot.bookedBy != null) {
-                                String code = extSlot.bookedBy.substring(3, 6);
+                            if (extSlot.getBookingId() != null) {
+                                String code = extSlot.getBookingId().substring(3, 6);
                                 if (code.equalsIgnoreCase(campus.getCode())) {
                                     for (Student student : this.students) {
                                         if (student.getStudentId().equalsIgnoreCase(extSlot.bookedBy)) {
                                             int studentIndex = this.students.indexOf(student);
                                             int bookingIndex = student.bookingIds.indexOf(extSlot.getBookingId());
-                                            student.bookingIds.remove(bookingIndex);
-                                            this.students.set(studentIndex, student);
+                                            synchronized (studentLock) {
+                                                student.bookingIds.remove(bookingIndex);
+                                                this.students.set(studentIndex, student);
+                                            }
                                             break;
                                         }
                                     }
@@ -568,14 +631,18 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
                                     cancelBookingOnOtherCampus(extSlot.bookedBy, extSlot.getBookingId(), udpPort, true);
                                 }
                             }
-                            extSlots.remove(extSlotIndex);
+                            slotsToDelete.add(extSlot);
                             break;
                         }
                     }
                 }
+                extSlots.removeAll(slotsToDelete);
                 rooms.put(roomNo, extSlots);
                 logs.info("The record has successfully been removed!");
                 success = true;
+            }
+            synchronized (roomLock) {
+                this.roomRecords.put(date, rooms);
             }
         }
 
@@ -583,24 +650,26 @@ public class CampusOperations extends UnicastRemoteObject implements CampusAdmin
     }
 
     public boolean forceDeleteBooking(String studentId, String bookingId) {
-        boolean success = false;
+        synchronized (studentLock) {
+            boolean success = false;
 
-        for (Student student : this.students) {
-            if (student.getStudentId().equalsIgnoreCase(studentId)) {
-                int studentIndex = this.students.indexOf(student);
-                int bookingIndex = student.bookingIds.indexOf(bookingId);
+            for (Student student : this.students) {
+                if (student.getStudentId().equalsIgnoreCase(studentId)) {
+                    int studentIndex = this.students.indexOf(student);
+                    int bookingIndex = student.bookingIds.indexOf(bookingId);
 
-                student.bookingIds.remove(bookingIndex);
+                    student.bookingIds.remove(bookingIndex);
 
-                this.students.set(studentIndex, student);
+                    this.students.set(studentIndex, student);
 
-                logs.info("Booking with id, " + bookingId + " has been cancelled by " + studentId);
-                success = true;
-                break;
+                    logs.info("Booking with id, " + bookingId + " has been cancelled by " + studentId);
+                    success = true;
+                    break;
+                }
             }
-        }
 
-        return success;
+            return success;
+        }
     }
 
     private byte[] serialize(Object obj) throws IOException {
